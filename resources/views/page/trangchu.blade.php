@@ -67,7 +67,7 @@
                             </div>
                             @endforeach
                         </div>
-                        <div class="row">{{$new_product->links()}}</div>
+                        <div class="row">{{$new_product->links("pagination::bootstrap-4")}}</div>
                     </div> <!-- .beta-products-list -->
 
                     <div class="space50">&nbsp;</div>
@@ -101,7 +101,7 @@
                             </div>
                             @endforeach  
                         </div>
-                        <div class="row">{{$sanpham_khuyenmai->links()}}</div>
+                        <div class="row">{{$sanpham_khuyenmai->links("pagination::bootstrap-4")}}</div>
                     </div> <!-- .beta-products-list -->
                 </div>
             </div> <!-- end section with sidebar and main content -->
