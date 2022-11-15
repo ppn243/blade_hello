@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 use App\Models\Slide;
 use App\Models\Product;
 use App\Models\ProductType;
+use App\Models\Comment;
+use App\Models\Cart;
 use Illuminate\Http\Request;
 
 class PageController extends Controller
@@ -35,9 +37,41 @@ class PageController extends Controller
         return view('page.product_model');
     }
 
-    public function getDetail()
+    public function getDetail(Request $request)
     {
-        return view('page.product_detail');
+        $sanpham =  Product::where('id', $request->id)->first();
+
+        $splienquan = Product::where('id', '<>', $sanpham->id, 'and', 'id_type', '=', $sanpham->id_type,)->paginate(3);
+
+        $comments = Comment::where('id_product', $request->id)->get();
+        
+        return view('page.chitiet_sanpham', compact('sanpham', 'splienquan', 'comments'));
+    }
+
+    public function getAddToCart(Request $req, $id) 
+    {
+        // if (Session()->has('user')) {
+            if(Product::find($id)) {
+                $product = Product::find($id);
+                $oldCart = Session('cart')?Session()->get('cart'):null;
+                $cart = new Cart($oldCart);
+                $cart -> add($product, $id);
+                $req -> session()->put('cart', $cart);
+                return redirect()->back();
+        //     } else {
+        //         return '<script>alert("Không tìm thấy sản phẩm này.");window.location.assign("/");</script>';
+        //     }     
+        // }  else {
+        //     return '<script>alert("Vui lòng đăng nhập để sử dụng chức năng này.");window.location.assign("/login");</script>';
+            }
+    }
+
+    public function getDelItemCart($id){
+        $oldCart = Session('cart')?Session()->get('cart'):null;
+        $cart = new Cart($oldCart);
+        $cart->removeItem($id);
+        Session()->put('cart', $cart);
+        return redirect()->back();
     }
 
     public function getContact()

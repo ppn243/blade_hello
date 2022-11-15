@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use App\Models\ProductType;
 use App\Models\Product;
+use App\Models\Cart;
+use Illuminate\Contracts\Session\Session;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -32,6 +34,17 @@ class AppServiceProvider extends ServiceProvider
         view()->composer('page.product_type', function ($view) {
             $product_new = Product::where('new', 1)->orderBy('id','DESC')->skip(1)->take(8)->get();
             $view->with('product_new', $product_new);
+        });
+        view()->composer('page.header', function($view) {
+            if (Session('cart')) {
+                $oldCart = Session()->get('cart');
+                $newcart = new Cart($oldCart);
+                $view->with(['cart' => Session()->get('cart'),
+                                        'product_cart' => $newcart->items,
+                                        'totalPrice' => $newcart->totalPrice,
+                                        'totalQty' => $newcart ->totalQty
+            ]);
+            }
         });
     }
 }
