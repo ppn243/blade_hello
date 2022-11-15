@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Http\Controllers;
+
+use Session;
 use App\Models\Slide;
 use App\Models\Product;
 use App\Models\ProductType;
@@ -66,11 +68,18 @@ class PageController extends Controller
             }
     }
 
-    public function getDelItemCart($id){
+    public function getDelItemCart($id)
+    {
         $oldCart = Session('cart')?Session()->get('cart'):null;
         $cart = new Cart($oldCart);
-        $cart->removeItem($id);
+        $cart->removeItems($id);
+        if(count($cart->items)>0){
         Session()->put('cart', $cart);
+
+        }
+        else{
+            Session()->forget('cart');
+        }
         return redirect()->back();
     }
 
