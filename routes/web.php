@@ -35,6 +35,23 @@ Route::get('/login', function () {
 Route::post('/login', [PageController::class, 'Login']);
 Route::get('/logout', [PageController::class, 'Logout']);
 
+//-------------------------ADMIN---------------------------------
+Route::get('/admin', [PageController::class, 'getIndexAdmin']);
+
+Route::get('/admin-add-form', [PageController::class, 'getAdminAdd'])->name('add-product');
+Route::post('/admin-add-form', [PageController::class, 'postAdminAdd']);
+
+Route::get('/admin-edit-form/{id}', [PageController::class, 'getAdminEdit']);
+Route::post('/admin-edit', [PageController::class, 'postAdminEdit']);
+
+Route::post('/admin-delete/{id}', [PageController::class, 'postAdminDelete']);
+
+Route::get('/admin-export', [PageController::class, 'exportAdminProduct'])->name('export');
+
+Route::get('/return-vnpay', function () {
+    return view('vnpay.return-vnpay');
+});
+
 
 
 
