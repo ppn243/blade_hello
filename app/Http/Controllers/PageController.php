@@ -190,8 +190,8 @@ class PageController extends Controller
 
     public function Logout()
     {
-        Session()->getforget('user');
-        Session()->getforget('cart');
+        Session()->forget('user');
+        Session()->forget('cart');
         return redirect('/trangchu');
     }
 
