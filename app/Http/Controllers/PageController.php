@@ -8,7 +8,12 @@ use App\Models\Product;
 use App\Models\ProductType;
 use App\Models\Comment;
 use App\Models\Cart;
+use App\Models\BillDetail;
+use App\Models\Bill;
+use App\Models\Customer;
+use App\Models\Wishlist;
 use Illuminate\Http\Request;
+use App\Models\User;
 
 class PageController extends Controller
 {
@@ -22,16 +27,17 @@ class PageController extends Controller
         return view('page.trangchu', compact('slide', 'new_product', 'sanpham_khuyenmai'));
     }
 
-    public function getLoaiSp($type) {
+    public function getLoaiSp($type)
+    {
         $type_product = ProductType::all();
 
         $sp_theoloai = Product::where('id_type', $type)->get();
 
-        $sp_khac = Product::where('id_type', '<>', $type)-> paginate(3);
+        $sp_khac = Product::where('id_type', '<>', $type)->paginate(3);
 
         $loai_sp = ProductType::where('id', $type)->first();
 
-        return view('page.loai_sanpham', compact('type_product','sp_theoloai', 'sp_khac', 'loai_sp')); 
+        return view('page.loai_sanpham', compact('type_product', 'sp_theoloai', 'sp_khac', 'loai_sp'));
     }
 
     public function getModel()
@@ -46,41 +52,147 @@ class PageController extends Controller
         $splienquan = Product::where('id', '<>', $sanpham->id, 'and', 'id_type', '=', $sanpham->id_type,)->paginate(3);
 
         $comments = Comment::where('id_product', $request->id)->get();
-        
+
         return view('page.chitiet_sanpham', compact('sanpham', 'splienquan', 'comments'));
     }
 
-    public function getAddToCart(Request $req, $id) 
+    public function getAddToCart(Request $req, $id)
     {
         // if (Session()->has('user')) {
-            if(Product::find($id)) {
-                $product = Product::find($id);
-                $oldCart = Session('cart')?Session()->get('cart'):null;
-                $cart = new Cart($oldCart);
-                $cart -> add($product, $id);
-                $req -> session()->put('cart', $cart);
-                return redirect()->back();
-        //     } else {
-        //         return '<script>alert("Không tìm thấy sản phẩm này.");window.location.assign("/");</script>';
-        //     }     
-        // }  else {
-        //     return '<script>alert("Vui lòng đăng nhập để sử dụng chức năng này.");window.location.assign("/login");</script>';
-            }
+        if (Product::find($id)) {
+            $product = Product::find($id);
+            $oldCart = Session('cart') ? Session()->get('cart') : null;
+            $cart = new Cart($oldCart);
+            $cart->add($product, $id);
+            $req->session()->put('cart', $cart);
+            return redirect()->back();
+            //     } else {
+            //         return '<script>alert("Không tìm thấy sản phẩm này.");window.location.assign("/");</script>';
+            //     }     
+            // }  else {
+            //     return '<script>alert("Vui lòng đăng nhập để sử dụng chức năng này.");window.location.assign("/login");</script>';
+        }
     }
 
     public function getDelItemCart($id)
     {
-        $oldCart = Session('cart')?Session()->get('cart'):null;
+        $oldCart = Session('cart') ? Session()->get('cart') : null;
         $cart = new Cart($oldCart);
         $cart->removeItems($id);
-        if(count($cart->items)>0){
-        Session()->put('cart', $cart);
-
-        }
-        else{
+        if (count($cart->items) > 0) {
+            Session()->put('cart', $cart);
+        } else {
             Session()->forget('cart');
         }
         return redirect()->back();
+    }
+
+    // ------------------------ CHECKOUT -------------------															
+    public function getCheckout()
+    {
+        if (Session()->has('cart')) {
+            $oldCart = Session()->get('cart');
+            $cart = new Cart($oldCart);
+            return view('page.checkout')->with([
+                'cart' => Session()->get('cart'),
+                'product_cart' => $cart->items,
+                'totalPrice' => $cart->totalPrice,
+                'totalQty' => $cart->totalQty
+            ]);;
+        } else {
+            return view('page.checkout');
+        }
+        return view('page.checkout');
+    }
+    public function postCheckout(Request $req)
+    {
+        $cart = Session()->get('cart');
+        $customer = new Customer;
+        $customer->name =  $req->name;
+        $customer->gender = $req->gender;
+        $customer->email = $req->email;
+        $customer->address = $req->address;
+        $customer->phone_number = $req->phone_number;
+        // $customer->note = $req->notes;
+        if (isset($req->notes)) {
+            $customer->note = $req->notes;
+        } else {
+            $customer->note = "Không có ghi chú gì";
+        }
+
+        $customer->save();
+
+        $bill = new Bill;
+        $bill->id_customer = $customer->id;
+        $bill->date_order = date('Y-m-d');
+        $bill->total = $req->totalPrice;
+        $bill->payment = $req->payment_method;
+        if (isset($req->notes)) {
+            $bill->note = $req->notes;
+        } else {
+            $bill->note = "Không có ghi chú gì";
+        }
+        $bill->save();
+
+        foreach ($cart->items as $key => $value) {
+            $bill_detail = new BillDetail;
+            $bill_detail->id_bill = $bill->id;
+            $bill_detail->id_product = $key; //$value['item']['id'];												
+            $bill_detail->quantity = $value['qty'];
+            $bill_detail->unit_price = $value['price'] / $value['qty'];
+            $bill_detail->save();
+        }
+
+        Session()->forget('cart');
+        // $wishlists = Wishlist::where('id_user', Session()->get('user')->id)->get();
+        // if (isset($wishlists)) {
+        //     foreach ($wishlists as $element) {
+        //         $element->delete();
+        //     }
+        // }
+        return redirect()->back()->with('thongbao', 'Đặt hàng thành công');
+    }
+
+    public function Register(Request $request)
+    {
+        $input = $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email|unique:users',
+            'password' => 'required',
+            'c_password' => 'required|same:password'
+        ]);
+
+        $input['password'] = bcrypt($input['password']);
+        User::create($input);
+
+        echo '
+            <script>
+                alert("Đăng ký thành công. Vui lòng đăng nhập.");
+                window.location.assign("login")  
+            </script>
+        ';
+    }
+
+    public function Login(Request $request)
+    {
+        $login = [
+            'email' => $request->input('email'),
+            'password' => $request->input('pw')
+        ];
+        if (Auth()->attempt($login)) {
+            $user = Auth()->user();
+            Session()->put('user', $user);
+            echo '<script>alert("Đăng nhập thành công.");window.location.assign("trangchu");</script>';
+        } else {
+            echo '<script>alert("Đăng nhập thất bại.");window.location.assign("login");</script>';
+        }
+    }
+
+    public function Logout()
+    {
+        Session()->getforget('user');
+        Session()->getforget('cart');
+        return redirect('/trangchu');
     }
 
     public function getContact()
